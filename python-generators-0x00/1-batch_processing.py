@@ -1,42 +1,31 @@
 #!/usr/bin/python3
-import mysql.connector
-from mysql.connector import Error
+seed = __import__('seed')
+
 
 def stream_users_in_batches(batch_size):
     """
-    Generator function to stream rows in batches from user_data table.
+    Generator that fetches batches of users from the database.
     """
-    try:
-        connection = mysql.connector.connect(
-            host='localhost',
-            user='your_mysql_username',  # replace with your username
-            password='your_mysql_password',  # replace with your password
-            database='ALX_prodev'
-        )
+    offset = 0
+    while True:  # one loop
+        connection = seed.connect_to_prodev()
         cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM user_data;")
-        
-        # Fetch rows in batches
-        while True:
-            batch = cursor.fetchmany(batch_size)
-            if not batch:
-                break
-            yield batch
+        cursor.execute(f"SELECT * FROM user_data LIMIT {batch_size} OFFSET {offset}")
+        rows = cursor.fetchall()
+        connection.close()
 
-    except Error as e:
-        print(f"Error connecting to database: {e}")
-    finally:
-        if cursor:
-            cursor.close()
-        if connection:
-            connection.close()
+        if not rows:
+            break
+
+        yield rows  # use yield, not return
+        offset += batch_size
 
 
 def batch_processing(batch_size):
     """
-    Processes batches, filtering users older than 25.
+    Processes each batch by filtering users over age 25 and prints them.
     """
     for batch in stream_users_in_batches(batch_size):
         for user in batch:
             if user['age'] > 25:
-                print(user)
+                print(user)  # process each filtered user

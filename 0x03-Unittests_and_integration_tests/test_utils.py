@@ -1,27 +1,33 @@
 #!/usr/bin/env python3
-"""Unit tests for utils.get_json"""
+"""Unit tests for utils.memoize"""
 
 import unittest
-from unittest.mock import patch, Mock
-from parameterized import parameterized
-from utils import get_json
+from unittest.mock import patch
+from utils import memoize
 
 
-class TestGetJson(unittest.TestCase):
-    """Test class for get_json function"""
+class TestMemoize(unittest.TestCase):
+    """Test class for utils.memoize"""
 
-    @parameterized.expand([
-        ("http://example.com", {"payload": True}),
-        ("http://holberton.io", {"payload": False}),
-    ])
-    def test_get_json(self, test_url, test_payload):
-        """Test that get_json returns correct JSON from mocked requests.get"""
-        with patch("utils.requests.get") as mock_get:
-            mock_response = Mock()
-            mock_response.json.return_value = test_payload
-            mock_get.return_value = mock_response
+    def test_memoize(self):
+        """Test that memoize caches method result"""
 
-            result = get_json(test_url)
+        class TestClass:
+            def a_method(self):
+                return 42
 
-            mock_get.assert_called_once_with(test_url)
-            self.assertEqual(result, test_payload)
+            @memoize
+            def a_property(self):
+                return self.a_method()
+
+        with patch.object(TestClass, 'a_method', return_value=42) as mock_method:
+            test_obj = TestClass()
+
+            # First call - should invoke a_method
+            result1 = test_obj.a_property
+            # Second call - should use cached result
+            result2 = test_obj.a_property
+
+            self.assertEqual(result1, 42)
+            self.assertEqual(result2, 42)
+            mock_method.assert_called_once()

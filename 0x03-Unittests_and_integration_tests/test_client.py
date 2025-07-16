@@ -2,13 +2,59 @@
 """Unit tests for client.GithubOrgClient"""
 
 import unittest
-from unittest.mock import patch, PropertyMock
-from parameterized import parameterized
+from unittest.mock import patch, PropertyMock, Mock
+from parameterized import parameterized, parameterized_class
 from client import GithubOrgClient
+from fixtures import TEST_PAYLOAD
+
+@parameterized_class(
+    ("org_payload", "repos_payload", "expected_repos", "apache2_repos"),
+    TEST_PAYLOAD  # This already contains a list of tuples
+)
+
+class TestIntegrationGithubOrgClient(unittest.TestCase):
+    """Integration tests for GithubOrgClient.public_repos"""
+
+    @classmethod
+    def setUpClass(cls):
+        """Start patching requests.get"""
+        cls.get_patcher = patch("requests.get")
+        mock_get = cls.get_patcher.start()
+
+        # Prepare Mock response objects with .json() method
+        mock_response_org = Mock()
+        mock_response_org.json.return_value = cls.org_payload
+
+        mock_response_repos = Mock()
+        mock_response_repos.json.return_value = cls.repos_payload
+
+        # Add enough mocks for both tests (each calls get_json twice)
+        mock_get.side_effect = [
+            mock_response_org, mock_response_repos,  # test_public_repos
+            mock_response_org, mock_response_repos   # test_public_repos_with_license
+        ]
+
+    @classmethod
+    def tearDownClass(cls):
+        """Stop patching requests.get"""
+        cls.get_patcher.stop()
+
+    def test_public_repos(self):
+        """Test that public_repos returns expected list"""
+        client = GithubOrgClient("test_org")
+        self.assertEqual(client.public_repos(), self.expected_repos)
+
+    def test_public_repos_with_license(self):
+        """Test that public_repos filters repos by license"""
+        client = GithubOrgClient("test_org")
+        self.assertEqual(
+            client.public_repos(license="apache-2.0"),
+            self.apache2_repos
+        )
 
 
 class TestGithubOrgClient(unittest.TestCase):
-    """Tests for GithubOrgClient"""
+    """Unit tests for GithubOrgClient"""
 
     @parameterized.expand([
         ("google",),

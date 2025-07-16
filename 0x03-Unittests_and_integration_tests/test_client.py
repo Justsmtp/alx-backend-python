@@ -60,8 +60,10 @@ class TestGithubOrgClient(unittest.TestCase):
         with patch.object(
             GithubOrgClient,
             "_public_repos_url",
-            return_value="https://fakeurl.com"
-        ):
+            new_callable=PropertyMock
+        ) as mock_url:
+            mock_url.return_value = "https://fakeurl.com"
+
             client = GithubOrgClient("test_org")
             result = client.public_repos()
 

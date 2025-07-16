@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """Unit tests for client.GithubOrgClient"""
 
+from typing import Self
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, PropertyMock
 from parameterized import parameterized
 from client import GithubOrgClient
-from unittest.mock import PropertyMock 
-from unittest.mock import patch, PropertyMock
 
 
 class TestGithubOrgClient(unittest.TestCase):
@@ -30,9 +29,12 @@ class TestGithubOrgClient(unittest.TestCase):
         )
         self.assertEqual(result, test_payload)
 
+class TestGithubOrgClient(unittest.TestCase):
+    """Tests for GithubOrgClient"""
+
     def test_public_repos_url(self):
         """Test that _public_repos_url returns correct URL from mocked org"""
-        with patch.object(GithubOrgClient, 'org', new_callable=property) as mock_org:
+        with patch.object(GithubOrgClient, 'org', new_callable=PropertyMock) as mock_org:
             mock_org.return_value = {
                 "repos_url": "https://api.github.com/orgs/test_org/repos"
             }
@@ -41,5 +43,6 @@ class TestGithubOrgClient(unittest.TestCase):
             result = client._public_repos_url
 
             self.assertEqual(
-                result, "https://api.github.com/orgs/test_org/repos"
+                result,
+                "https://api.github.com/orgs/test_org/repos"
             )

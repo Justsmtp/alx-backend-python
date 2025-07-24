@@ -14,3 +14,11 @@ urlpatterns = [
     path('', include(router.urls)),
     path('', include(convo_router.urls)),
 ]
+
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('conversations/', views.ConversationListView.as_view(), name='conversation-list'),
+    # add more chat-related endpoints here
+]

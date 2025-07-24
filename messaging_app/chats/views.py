@@ -3,11 +3,22 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.permissions import AllowAny 
 
 from .models import Conversation, Message
 from .serializers import ConversationSerializer, MessageSerializer
 from .permissions import IsParticipantOfConversation
 from .filters import MessageFilter
+
+
+from .models import Conversation
+from .serializers import ConversationSerializer
+
+from rest_framework.generics import ListCreateAPIView
+
+class ConversationListView(ListCreateAPIView):
+    queryset = Conversation.objects.all()
+    serializer_class = ConversationSerializer
 
 
 class ConversationViewSet(viewsets.ModelViewSet):

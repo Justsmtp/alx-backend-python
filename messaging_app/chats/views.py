@@ -1,25 +1,35 @@
-from rest_framework import viewsets, permissions, filters 
+from rest_framework import viewsets, permissions, filters
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from .models import Conversation, Message
-from .serializers import ConversationSerializer, MessageSerializer
 from django.shortcuts import get_object_or_404
 
+from .models import Conversation, Message
+from .serializers import ConversationSerializer, MessageSerializer
+from .permissions import IsParticipantOfConversation
 
 class ConversationViewSet(viewsets.ModelViewSet):
-    queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [filters.OrderingFilter]  
+    permission_classes = [permissions.IsAuthenticated, IsParticipantOfConversation]
+    filter_backends = [filters.OrderingFilter]
     ordering_fields = ['created_at']
     ordering = ['-created_at']
 
+    def get_queryset(self):
+        # Show only conversations the user participates in
+        return Conversation.objects.filter(participants=self.request.user)
+
     def perform_create(self, serializer):
-        serializer.save()
+        conversation = serializer.save()
+        conversation.participants.add(self.request.user)
 
     @action(detail=True, methods=['post'], url_path='send-message')
     def send_message(self, request, pk=None):
         conversation = self.get_object()
+
+        # Check if user is a participant
+        if request.user not in conversation.participants.all():
+            return Response({"detail": "You are not a participant of this conversation."}, status=403)
+
         serializer = MessageSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(sender=request.user, conversation=conversation)
@@ -28,26 +38,15 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
 
 class MessageViewSet(viewsets.ModelViewSet):
-    queryset = Message.objects.all()
     serializer_class = MessageSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsParticipantOfConversation]
     filter_backends = [filters.OrderingFilter]
     ordering_fields = ['sent_at']
     ordering = ['-sent_at']
 
-
-from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
-from .models import Message
-from .serializers import MessageSerializer
-from .permissions import IsOwnerOrParticipant
-
-class MessageViewSet(viewsets.ModelViewSet):
-    queryset = Message.objects.all()
-    serializer_class = MessageSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrParticipant]
-
     def get_queryset(self):
-        # Return only messages where the user is sender or receiver
-        user = self.request.user
-        return Message.objects.filter(sender=user) | Message.objects.filter(receiver=user)
+        # Only return messages from conversations user participates in
+        return Message.objects.filter(conversation__participants=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(sender=self.request.user)

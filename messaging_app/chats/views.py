@@ -34,3 +34,20 @@ class MessageViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.OrderingFilter]
     ordering_fields = ['sent_at']
     ordering = ['-sent_at']
+
+
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
+from .models import Message
+from .serializers import MessageSerializer
+from .permissions import IsOwnerOrParticipant
+
+class MessageViewSet(viewsets.ModelViewSet):
+    queryset = Message.objects.all()
+    serializer_class = MessageSerializer
+    permission_classes = [IsAuthenticated, IsOwnerOrParticipant]
+
+    def get_queryset(self):
+        # Return only messages where the user is sender or receiver
+        user = self.request.user
+        return Message.objects.filter(sender=user) | Message.objects.filter(receiver=user)

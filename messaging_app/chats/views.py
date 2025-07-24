@@ -2,10 +2,12 @@ from rest_framework import viewsets, permissions, filters, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Conversation, Message
 from .serializers import ConversationSerializer, MessageSerializer
 from .permissions import IsParticipantOfConversation
+from .filters import MessageFilter
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
@@ -44,7 +46,8 @@ class ConversationViewSet(viewsets.ModelViewSet):
 class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
     permission_classes = [permissions.IsAuthenticated, IsParticipantOfConversation]
-    filter_backends = [filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_class = MessageFilter
     ordering_fields = ['sent_at']
     ordering = ['-sent_at']
 
@@ -61,9 +64,8 @@ class MessageViewSet(viewsets.ModelViewSet):
 
         # Enforce participant check
         if self.request.user not in conversation.participants.all():
-            # Explicitly use HTTP_403_FORBIDDEN
             raise permissions.PermissionDenied(detail="You are not a participant of this conversation.")
-        
+
         return Message.objects.filter(conversation=conversation)
 
     def create(self, request, *args, **kwargs):

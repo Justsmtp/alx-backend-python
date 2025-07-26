@@ -76,3 +76,22 @@ class OffensiveLanguageMiddleware:
         else:
             ip = request.META.get('REMOTE_ADDR')
         return ip
+    
+class RolePermissionMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Only enforce on specific paths, e.g., admin actions
+        if request.path.startswith("/api/conversations/"):  
+            if not request.user.is_authenticated:
+                return HttpResponseForbidden("Authentication required.")
+            
+            # Example: Check user role (assuming you have a 'role' field on User)
+            user_role = getattr(request.user, "role", None)
+            
+            # Only allow admin or moderator
+            if user_role not in ["admin", "moderator"]:
+                return HttpResponseForbidden("You do not have permission to perform this action.")
+        
+        return self.get_response(request)

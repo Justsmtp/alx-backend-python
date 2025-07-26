@@ -56,6 +56,7 @@ MIDDLEWARE = [
     # Custom middlewares
     'chats.middleware.RequestLoggingMiddleware',
     'chats.middleware.RestrictAccessByTimeMiddleware',
+    'chats.middleware.OffensiveLanguageMiddleware',
 ]
 
 REST_FRAMEWORK = {
